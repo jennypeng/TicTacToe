@@ -2,11 +2,13 @@ window.onload = function() {
   var timer = null;
   var socket = io.connect("http://localhost:8080/");
   var isXPlayer = false;
-  var isSpectator = true;
+  var gameNum = null;
+  //var isSpectator = true;
   var myTurn = false;
   var symbol = "O";
   socket.on('playersFound', function(data){
-    isSpectator = false; // this client is playing
+    //isSpectator = false; // this client is playing
+    gameNum = data.gameID;
     if (data.playerStart) {
       symbol = "X";
       isXPlayer = true;
@@ -26,21 +28,22 @@ window.onload = function() {
   socket.on('triggerhover', function(data){
     var fromID = data.from;
     var square = data.square;
-    if (fromID != socket.id) {
+    if ((fromID != socket.id) && (data.gameID == gameNum)) {
       $(document.getElementById(square)).addClass('hover hover' + data.player);
     }
   });
   socket.on('removehover', function(data){
     var fromID = data.from;
     var square = data.square;
-    if (fromID != socket.id) {
+    if ((fromID != socket.id) && (data.gameID == gameNum)) {
       $(document.getElementById(square)).removeClass('hover hover' + data.player);
     }
   });
+
   socket.on('clicksquare', function(data){
     var fromID = data.from;
     var square = data.square;
-    if (fromID != socket.id) {
+    if ((fromID != socket.id) && (data.gameID == gameNum)) {
       $(document.getElementById(square)).addClass('clicked clicked' + data.player);
     }
   });
@@ -48,7 +51,6 @@ window.onload = function() {
     myTurn = true;
   });
   socket.on('gameover', function(data) {
-    console.log('game over!!!');
     $('.overlay').fadeIn('slow');
     $('.box').fadeIn('slow');
 
@@ -67,42 +69,44 @@ window.onload = function() {
     isSpectator = true;
     myTurn = false;
     symbol = "O";
-    // TEST!!!!!!
-    socket.disconnect();
-    //socket.emit('disconnect', socket);
+
+    // force this client to disconnect as a player if it hasn't already
+    //console.log('am i disconnecting')
+    //if (!data.disconnect) socket.disconnect();
+    
   })
 
   $('.square').on('mouseover', function() { // what if there is hover from a non player?
-    if (!isSpectator && myTurn && !$(this).hasClass('clicked')) {
-      socket.emit('mouseover', { player: symbol, from: socket.id , square: $(this).attr('id')});
+    if (myTurn && !$(this).hasClass('clicked')) {
+      socket.emit('mouseover', { gameID: gameNum, player: symbol, from: socket.id , square: $(this).attr('id')});
       $(this).addClass('hover hover' + symbol);
     }
   });
   $('.square').on('mouseout', function() { // what if there is hover from a non player?
-    if (!isSpectator && $(this).hasClass('hover' + symbol) && !$(this).hasClass('clicked')) {
-      socket.emit('mouseout', { player: symbol, from: socket.id , square: $(this).attr('id')});
+    if ($(this).hasClass('hover' + symbol) && !$(this).hasClass('clicked')) {
+      socket.emit('mouseout', { gameID: gameNum, player: symbol, from: socket.id , square: $(this).attr('id')});
       $(this).removeClass('hover hover' + symbol);
     }
   });
 
   $('.square').on('click', function() {
-    if (!isSpectator && myTurn && !$(this).hasClass('clicked')) {
-      socket.emit('clickedsquare', {player: symbol, from: socket.id, square: $(this).attr('id')});
-      $(this).removeClass('hover hoverX');
-      $(this).removeClass('hover hoverO');
+    if (myTurn && !$(this).hasClass('clicked')) {
+      socket.emit('clickedsquare', {gameID: gameNum, player: symbol, from: socket.id, square: $(this).attr('id')});
+      $('.square').removeClass('hover hoverX');
+      $('.square').removeClass('hover hoverO');
       $(this).addClass('clicked clicked' + symbol);
-      socket.emit('nextturn', {});
+      socket.emit('nextturn', {gameID: gameNum});
       myTurn = false;
       checkWin();
     }
   });
+
   $('.play-again').on('click', function() {
     clearBoard();
     $('.play-again').hide();
     $('.gameover').hide();
-    socket.connect();
-    //socket.emit('replay', {player: socket.id});
     $('.waiting-text').fadeIn();
+    socket.emit('joingame', {id: socket.id});
 
   });
   /* Clears the board. */
@@ -167,6 +171,6 @@ window.onload = function() {
     }
   }
   function finishGame(symbol) {
-    socket.emit('endgame', {winner: symbol});
+    socket.emit('endgame', {gameID: gameNum, winner: symbol, disconnect: false});
   }
 }
