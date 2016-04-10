@@ -1,8 +1,232 @@
 body {
-  padding: 50px;
-  font: 14px "Lucida Grande", Helvetica, Arial, sans-serif;
+  /*padding: 50px;*/
+  font: 14px 'frankfurter',"Lucida Grande", Helvetica, Arial, sans-serif;
 }
 
 a {
-  color: #00B7FF;
+  color: #4682b4;
+  font-family: 'frankfurter';
+
 }
+/* Install fonts. */
+@font-face {
+    font-family: 'frankfurter';
+    src: url('/fonts/frankfurter_plain-webfont.eot');
+    src: url('/fonts/frankfurter_plain-webfont.eot?#iefix') format('embedded-opentype'),
+         url('/fonts/frankfurter_plain-webfont.woff2') format('woff2'),
+         url('/fonts/frankfurter_plain-webfont.woff') format('woff'),
+         url('/fonts/frankfurter_plain-webfont.ttf') format('truetype'),
+         url('/fonts/frankfurter_plain-webfont.svg#frankfurterregular') format('svg');
+    font-weight: normal;
+    font-style: normal;
+
+}
+/* Shaking effect. */
+@keyframes shake {
+  10%, 90% {
+    transform: translate3d(-1px, 0, 0);
+  }
+
+  20%, 80% {
+    transform: translate3d(2px, 0, 0);
+  }
+
+  30%, 50%, 70% {
+    transform: translate3d(-4px, 0, 0);
+  }
+
+  40%, 60% {
+    transform: translate3d(4px, 0, 0);
+  }
+}
+
+.board {
+  margin: 50px auto;
+}
+
+.title {
+  font-size: 42px;
+  font-family: 'frankfurter';
+  color: #B24800;
+  text-align: center;
+  margin: 50px auto;
+}
+
+.light-orange-text {
+  color: #FF6600;
+}
+.light-blue-text {
+  color: #4682b4;
+}
+.small {
+  font-size: 20px;
+}
+.square {
+  background-color: #C0C0C0;
+  border-radius: 15px;
+  height: 140px;
+  width: 140px;
+  text-align: center;
+  display: table-cell;
+  vertical-align: middle;
+  -webkit-transition: background 0.3s linear;
+  -moz-transition: background 0.3s linear;
+  -ms-transition: background 0.3s linear;
+  -o-transition: background 0.3s linear;
+  transition: background 0.3s linear;
+}
+
+.square.hover {
+  -webkit-transition: background 0s linear;
+  -moz-transition: background 0s linear;
+  -ms-transition: background 0s linear;
+  -o-transition: background 0s linear;
+  transition: background 0s linear;
+}
+
+.square.hoverX {
+  background-color: #FFC095;
+
+
+}
+.square.hoverO {
+  background-color: #8CBEE5;
+}
+
+.square:not(.clicked).hoverX > .x, .square:not(.clicked).hoverO > .o {
+  animation: shake 0.92s cubic-bezier(.36,.07,.19,.97) both;
+  transform: translate3d(0, 0, 0);
+  backface-visibility: hidden;
+  perspective: 1000px;
+  display: block;
+  color: #F7F7F7;
+}
+
+.square.clicked {
+  -webkit-transition: background 0.3s linear;
+  -moz-transition: background 0.3s linear;
+  -ms-transition: background 0.3s linear;
+  -o-transition: background 0.3s linear;
+  transition: background 0.3s linear;
+  /* For game over animation. */
+  -webkit-transition:width 300ms ease-in-out, height 300ms ease-in-out;
+  -moz-transition:width 300ms ease-in-out, height 300ms ease-in-out;
+  -o-transition:width 300ms ease-in-out, height 300ms ease-in-out;
+  transition:width 300ms ease-in-out, height 300ms ease-in-out;
+}
+.square.clickedX {
+  background-color: #FC9653;
+}
+.square.clickedO {
+  background-color: #54A9E9;
+}
+.square.clickedX > .x, .square.clickedO > .o{
+  display: block;
+  color: white;
+}
+
+.square.game-over > .x, .square.game-over > .o{
+  display: none;
+}
+.square.game-over {
+  width: 0px;
+  height: 0px;
+}
+
+td {
+  display: inline-block;
+}
+.x, .o {
+  display: none;
+  font-size: 60px;
+  font-family: 'frankfurter';
+  text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.2)
+}
+
+.x {
+  color:  #DCDCDC;
+
+}
+.o {
+  color:  #DCDCDC;
+}
+/* OVERLAY CODE FOR GAME START. */
+.overlay{
+    background-color: gray;
+    opacity: .8;
+    position:fixed;
+    top:0px;
+    bottom:0px;
+    left:0px;
+    right:0px;
+    z-index:100;
+}
+.box{
+    min-height: 100px;
+    max-height: 120px;
+    min-width: 150px;
+    position:fixed;
+    top: 40%;
+    left:30%;
+    right:30%;
+    text-align: center;
+    background-color:#fff;
+    color:#7F7F7F;
+    padding:40px;
+    border:2px solid #ccc;
+    -moz-border-radius: 20px;
+    -webkit-border-radius:20px;
+    -khtml-border-radius:20px;
+    -moz-box-shadow: 0 1px 5px #333;
+    -webkit-box-shadow: 0 1px 5px #333;
+    z-index:101;
+}
+
+.box h1{
+    margin:-20px -20px 0px -20px;
+    padding:10px;
+    font-family: 'frankfurter';
+    font-size: 30px;
+    -moz-border-radius:20px 20px 0px 0px;
+    -webkit-border-top-left-radius: 20px;
+    -webkit-border-top-right-radius: 20px;
+    -khtml-border-top-left-radius: 20px;
+    -khtml-border-top-right-radius: 20px;
+}
+.countdown, .player-found-text, .gameover, .play-again {
+  display: none;
+  position: relative !important;
+  margin-top: 5% !important;
+}
+.play-again:hover {
+  animation: shake 0.92s cubic-bezier(.36,.07,.19,.97) both;
+  transform: translate3d(0, 0, 0);
+  backface-visibility: hidden;
+  perspective: 1000px;
+  color: #B24800;
+}
+
+/* Loading animation. */
+@keyframes loading {
+    0% {transform: translate(0,0);}
+    50% {transform: translate(0,15px);}
+    100% {transform: translate(0,0);}
+}
+
+.dot {
+  margin-top: 20px;
+  margin-bottom: 20px;
+  display: inline-block;
+  width: 10px;
+  height: 10px;
+  border-radius: 15px;
+  background-color: #7F7F7F;
+}
+.load {
+  position: relative;
+  top: 8px;
+  white-space: nowrap;
+}
+.load .dot:nth-last-child(1) {animation: loading .6s .1s linear infinite;}
+.load .dot:nth-last-child(2) {animation: loading .6s .2s linear infinite;}
+.load .dot:nth-last-child(3) {animation: loading .6s .3s linear infinite;}

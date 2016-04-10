@@ -1,0 +1,88 @@
+<link href="/stylesheets/style.css" rel="stylesheet" type="text/css">
+<script src="//ajax.googleapis.com/ajax/libs/jquery/1.10.2/jquery.min.js"></script>
+<script src="/javascripts/tictactoe.js"></script>
+<script src="/socket.io/socket.io.js"></script>
+
+<div class="title">TIC<span class="light-orange-text">TAC</span>TOE<span class="light-orange-text">!</span></div>
+<!--<span class="title light-blue-text small">BY JENNY</span> -->
+<table class="board">
+  <tr>
+    <td>
+      <div class="square" id="1">
+        <span class="o">O</span>
+        <span class="x">X</span>
+      </div>
+    </td>
+    <td>
+      <div class="square" id="2">
+        <span class="o">O</span>
+        <span class="x">X</span>
+      </div>
+    </td>
+    <td>
+      <div class="square" id="3">
+        <span class="o">O</span>
+        <span class="x">X</span>
+      </div>
+    </td>
+  </tr>
+  <tr>
+    <td>
+      <div class="square" id="4">
+        <span class="o">O</span>
+        <span class="x">X</span>
+      </div>
+    </td>
+    <td>
+      <div class="square" id="5">
+        <span class="o">O</span>
+        <span class="x">X</span>
+      </div>
+    </td>
+    <td>
+      <div class="square" id="6">
+        <span class="o">O</span>
+        <span class="x">X</span>
+      </div>
+    </td>
+  </tr>
+  <tr>
+    <td>
+      <div class="square" id="7">
+        <span class="o">O</span>
+        <span class="x">X</span>
+      </div>
+    </td>
+    <td>
+      <div class="square" id="8">
+        <span class="o">O</span>
+        <span class="x">X</span>
+      </div>
+    </td>
+    <td>
+      <div class="square" id="9">
+        <span class="o">O</span>
+        <span class="x">X</span>
+      </div>
+    </td>
+  </tr>
+</table>
+
+<div class="overlay" id="overlay"></div>
+
+<div class="box" id="box">
+ <h1 class="waiting-text"><span>WAITING FOR OPPONENT</span>
+   <span class="load">
+    <div class="dot"></div>
+    <div class="dot"></div>
+    <div class="dot"></div>
+  </span>
+ </h1>
+
+ <h1 class="player-found-text">PLAYER FOUND!</h1>
+ <h1 class="countdown">GAME STARTS IN</h1>
+ <h1 class="gameover win-prompt">YOU WON!</h1>
+ <h1 class="gameover lose-prompt">YOU LOST. </h1>
+ <h1 class="gameover tie-prompt">TIE! </h1>
+ <div class="play-again"> PLAY AGAIN?</div>
+</div>
