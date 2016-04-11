@@ -1,3 +1,4 @@
+// set up the app
 var express = require('express');
 var path = require('path');
 var favicon = require('serve-favicon');
@@ -6,27 +7,23 @@ var cookieParser = require('cookie-parser');
 var bodyParser = require('body-parser');
 
 var routes = require('./routes/index');
-var users = require('./routes/users');
 
 var app = express();
-// set up sockets to lissten to port 3000
+
+// set up sockets to lissten to port 8080
 var server = require('http').Server(app)
 var io = require('socket.io')(server);
+
 // list of games going on
 var games = [];
-// keeping track of players and what room they're in
-var xPlayers = [];
-var oPlayers = [];
-// keeping count of players
-var xPlayersCount = 0;
-var oPlayersCount = 0;
+
+// keeping track of players and what room they're in and type, ex: players[socket.id] = {type: "X", gameID: 3}
+var players = [];
 
 // view engine setup
 app.set('views', path.join(__dirname, 'views'));
 app.set('view engine', 'hbs');
 
-// uncomment after placing your favicon in /public
-//app.use(favicon(path.join(__dirname, 'public', 'favicon.ico')));
 app.use(logger('dev'));
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: false }));
@@ -34,7 +31,6 @@ app.use(cookieParser());
 app.use(express.static(path.join(__dirname, 'public')));
 
 app.use('/', routes);
-app.use('/users', users);
 
 // catch 404 and forward to error handler
 app.use(function(req, res, next) {
@@ -42,8 +38,6 @@ app.use(function(req, res, next) {
   err.status = 404;
   next(err);
 });
-
-// error handlers
 
 // development error handler
 // will print stacktrace
@@ -69,224 +63,109 @@ app.use(function(err, req, res, next) {
 
 /*********** SOCKET LOGIC FOR TICTACTTOE *********/
 io.sockets.on('connection', function (socket) {
-    console.log('connecting');
-    joinGame(socket.id);
-    /*if (userCount == 1) {
-      playerX = socket.id;
-    }
-    if (userCount == 2) {
-      playerO = socket.id;
+  joinGame(socket.id);
 
-      // end the waiting screen for all the players
-      gameInProgress = true;
-      io.to(playerX).emit('playersFound', {playerStart: true});
-      io.to(playerO).emit('playersFound', {playerStart: false});
-      // set up next turn
-      isXTurn = false;
-    }*/
-    function leaveGame(id, dc) {
-      console.log('xplayers contains: ' + !isNaN(xPlayers[id]));
-      if (!isNaN(xPlayers[id])) { 
-        console.log('deleting player X');
-        var roomNum = xPlayers[id];
-        var dcGame = games[roomNum];
-        dcGame.playerX = null;
-        xPlayersCount--;
-        //dcGame.playerO = null;
-        delete xPlayers[id];
-        delete xPlayers[id];
-        if (dc){
-          //xPlayerCount++;
-          //dcGame.playerX = dcGame.playerO;
-          //dcGame.playerO = null;
-          //xPlayers[dcGame.playerX] = roomNum;
-          io.to(dcGame.playerO).emit('gameover', {winner: "O", disconnect: true});
-          leaveGame(dcGame.playerO, false);
-        }
-        // set this room to free if no players in the room
-        //if (!dcGame.playerO && !dcGame.playerX) dcGame.empty = true;
-      } else { // if player O disconnects, remove playerO from the database
-        console.log('dleeting player O');
-        var dcGame = games[oPlayers[id]];
-        if (dcGame) {
-          //io.to(dcGame.playerX).emit('gameover', {winner: "X", disconnect: true});
-          dcGame.playerO = null;
-          if (dc) {
+  /* Function to let the player with id leave a game. If dc is true, this was a disconnect in the middle of a game. */
+  function leaveGame(id, dc) {
+    if (!players[id]) return; // if this room doesn't exist, just return
 
-            console.log('player o dc sending mesg to x ' + dcGame.playerX);
-            io.to(dcGame.playerX).emit('gameover', {winner: "X", disconnect: true});
-            leaveGame(dcGame.playerX, false);
-          }
-          // set this room to free if no players in the room
-          if (!dcGame.playerX) dcGame.empty = true;
-        }
-        console.log('subbing oplayers count from ' + id);
-        oPlayersCount--;
-        delete oPlayers[id]
+    var dcGame = games[players[id].gameID];
+
+    if (players[id].type == 'X') {  // if this was an X player
+      dcGame.playerX = null;
+      delete players[id];
+      // if this was a disconnect, force the other player to leave the game also if they haven't already
+      if (dc && dcGame.playerO != null){ 
+        io.to(dcGame.playerO).emit('gameover', {winner: "DC"});
+        leaveGame(dcGame.playerO, false);
+      }
+    } else { 
+      dcGame.playerO = null;
+      delete players[id]
+      if (dc && dcGame.playerX != null) {
+        io.to(dcGame.playerX).emit('gameover', {winner: "DC"});
+        leaveGame(dcGame.playerX, false);
+      } 
     }
   };
+
+  /* Function to let the player with id join a game. Finds the room with the first free space, or creates a new one. */
   function joinGame(id) {
-    console.log('xplyaers is ' + xPlayersCount);
-    console.log('oplayers count is ' + oPlayersCount);
     var freeIndex;
+    // find a room with a missing player
     for (freeIndex = 0; freeIndex < games.length; freeIndex++) {
       var game = games[freeIndex];
-      if (!game.playerX) {
+      if (!game.playerX) { // fill in as a x player
         game.playerX = id;
-        game.empty = false;
-        xPlayersCount++;
-        xPlayers[id] = freeIndex;
-        console.log('found an empty X and filling');
+        players[id] = {gameID: freeIndex, type: 'X'};
         break;
       } 
-      else if (!game.playerO) {
+      else if (!game.playerO) { // fill in as a o player
         game.playerO = id;
-        game.empty = false;
-        oPlayersCount++;
-        oPlayers[id] = freeIndex;
-        console.log('found an empty O and filling');
+        players[id] = {gameID: freeIndex, type: 'O'};
         break;
       }
     }
-    console.log('freeIndex is ' + freeIndex);
-    if (freeIndex == games.length) {
+    if (freeIndex == games.length) { // if we had to make a new game, auto fill in as x
       games[freeIndex] = {playerX: id};
       games[freeIndex].empty = false;
-      xPlayersCount++;
-      xPlayers[id] = freeIndex;
+      players[id] = {gameID: freeIndex, type: 'X'};
     } 
-    console.log('player O is ' + games[freeIndex].playerO);
-    console.log('player X is ' + games[freeIndex].playerX);
-    console.log('why mista');
-    console.log('together they areAEFWEF ' + (games[freeIndex].playerO && games[freeIndex].playerX));
-    if (games[freeIndex].playerO && games[freeIndex].playerX) {
+    if (games[freeIndex].playerO && games[freeIndex].playerX) { // if both players full, start a game
       io.to(games[freeIndex].playerX).emit('playersFound', {playerStart: true, gameID: freeIndex});
       io.to(games[freeIndex].playerO).emit('playersFound', {playerStart: false, gameID: freeIndex});
       games[freeIndex].isXTurn = false;
     }
+  };
 
-    /*if (xPlayersCount == oPlayersCount) { // 1 0  4
+  // if a socket disconnects, we leave the game
+  socket.on('disconnect', function() {
+    leaveGame(socket.id, true);
+  });
 
-      // find the earliest free room
-      var freeIndex = games.length;
-      for (var i = 0; i < games.length; i++) {
-        if (games[i].empty) freeIndex = i;
-      }
-      // make a new room with the newly connected player as playerX
-      games[freeIndex] = {playerX: id};
-      games[freeIndex].empty = false;
-      xPlayersCount++;
-      // keep track of which room this player belongs to
-      xPlayers[id] = freeIndex; 
-      console.log('xplyaers is now' + xPlayersCount);
-      console.log('oplayers count is now' + oPlayersCount);
-    } else {
-      // find a game to fill with an o player
-      for (var i = 0; i < games.length; i++) {
-        if (!games[i].playerO) {
-          games[i].playerO = id;
-          oPlayers[id] = i;
-          oPlayersCount++;
-          console.log('xplyaers is now' + xPlayersCount);
-          console.log('oplayers count is now' + oPlayersCount);
-          // start the game
-          io.to(games[i].playerX).emit('playersFound', {playerStart: true, gameID: i});
-          io.to(games[i].playerO).emit('playersFound', {playerStart: false, gameID: i});
-          games[i].isXTurn = false;
-          break;
-        }
-      }    
-  }*/
-};
+  // listen to players' mouseover events and send to their opponent 
+  socket.on('mouseover', function(data) {
+    var game = games[data.gameID];
+    io.to(game.playerX).emit('triggerhover', data);
+    io.to(game.playerO).emit('triggerhover', data);
+  });
 
-    socket.on('disconnect', function() {
-      console.log('disconnecting ' + socket.id);
-      leaveGame(socket.id, true);
-    });
-        /*if (playerX == socket.id) { // if player x disconnects, player o becomes player x
-          if (gameInProgress) io.to(playerO).emit('gameover', {winner: "O", disconnect: true});
-          playerX = playerO;
-          playerO = null;
+  // listen to players' mouseout events and send to their opponent
+  socket.on('mouseout', function(data) {
+    var game = games[data.gameID];
+    io.to(game.playerX).emit('removehover', data);
+    io.to(game.playerO).emit('removehover', data);
+  });
 
-        } 
-        if (playerO == socket.id) { // if playerO disconnects, we just disconnect them
-          if (gameInProgress) io.to(playerX).emit('gameover', {winner: "X", disconnect: true});
-          playerO = null;
-        }
-        gameInProgress = false;*/
+  // record clicks from players and send to their opponent
+  socket.on('clickedsquare', function(data) {
+    var game = games[data.gameID];
+    io.to(game.playerX).emit('clicksquare', data);
+    io.to(game.playerO).emit('clicksquare', data);
+  });
 
-    //
-
-  //});
-
-    // //handle request for listing of users
-    socket.on('mouseover', function(data) {
-      var game = games[data.gameID];
-      io.to(game.playerX).emit('triggerhover', data);
-      io.to(game.playerO).emit('triggerhover', data);
-      //io.sockets.emit('triggerhover', data);
-    });
-    socket.on('mouseout', function(data) {
-      var game = games[data.gameID];
-
-      io.to(game.playerX).emit('removehover', data);
-      io.to(game.playerO).emit('removehover', data);
-      //io.sockets.emit('removehover', data);
-    });
-    socket.on('clickedsquare', function(data) {
-      var game = games[data.gameID];
-      io.to(game.playerX).emit('clicksquare', data);
-      io.to(game.playerO).emit('clicksquare', data);
-      //io.sockets.emit('clicksquare', data);
-    });
-    socket.on('joingame', function(data) {
-      joinGame('/#' + data.id);
-    })
-    socket.on('endgame', function(data) {
-      var game = games[data.gameID];
-
-      io.to(game.playerX).emit('gameover', data);
-      io.to(game.playerO).emit('gameover', data);
-      //delete xPlayers[game.playerX];
-      //delete oPlayers[game.playerO];
-      leaveGame(game.playerX);
-      leaveGame(game.playerO);
-      //game.playerO = null;
-      //game.playerX = null;
-      //game.empty = true;
-      //xPlayersCount--;
-      //oPlayersCount--;
-
-      /*gameInProgress = false;
-      playerX = null;
-      playerO = null;
-      io.sockets.emit('gameover', data);*/
-    });
-    /*socket.on('replay', function(data) {
-      var id = '/#' + data.player;
-      if (playerX && id != playerX) { // if playerX already exists and this player isn't playerX
-        playerO = id;
-        gameInProgress = true;
-        io.to(playerX).emit('playersFound', {playerStart: true});
-        io.to(playerO).emit('playersFound', {playerStart: false});
-        isXTurn = false;
-      } else {
-        playerX = id;
-      }
-    })*/
-
-    // turn logic
-    socket.on('nextturn', function(data) {
-      var gameID = data.gameID;
-      var game = games[gameID];
-      var nextTurnPlayer = game.isXTurn? game.playerX : game.playerO; // get the id of the next player
-      io.to(nextTurnPlayer).emit('playturn');
-      game.isXTurn = !game.isXTurn; // switch turns
-    });
-
-
+  // listen to players' requests to join in a game (pressing the replay button)
+  socket.on('joingame', function(data) {
+    joinGame('/#' + data.id);
   })
 
+  // listen to gameover requests
+  socket.on('endgame', function(data) {
+    var game = games[data.gameID];
+    io.to(game.playerX).emit('gameover', data);
+    io.to(game.playerO).emit('gameover', data);
+    leaveGame(game.playerX, false);
+    leaveGame(game.playerO, false);
+  });
 
-//module.exports = app;
+  // switch turns
+  socket.on('nextturn', function(data) {
+    var gameID = data.gameID;
+    var game = games[gameID];
+    var nextTurnPlayer = game.isXTurn? game.playerX : game.playerO; // get the id of the next player
+    io.to(nextTurnPlayer).emit('playturn');
+    game.isXTurn = !game.isXTurn; // switch turns
+  });
+})
+
 server.listen(8080);

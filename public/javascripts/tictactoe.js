@@ -1,19 +1,22 @@
 window.onload = function() {
   var timer = null;
   var socket = io.connect("http://localhost:8080/");
+
+  //default settings
   var isXPlayer = false;
   var gameNum = null;
-  //var isSpectator = true;
   var myTurn = false;
   var symbol = "O";
+
+  /* Game start. */
   socket.on('playersFound', function(data){
-    //isSpectator = false; // this client is playing
     gameNum = data.gameID;
     if (data.playerStart) {
       symbol = "X";
       isXPlayer = true;
       myTurn = true;
     }
+    // countdown to game start
     $('.waiting-text').fadeOut('slow', function() {
       $('.player-found-text').fadeIn('slow', function() {
         $('.player-found-text').fadeOut('slow', function() {
@@ -32,6 +35,7 @@ window.onload = function() {
       $(document.getElementById(square)).addClass('hover hover' + data.player);
     }
   });
+
   socket.on('removehover', function(data){
     var fromID = data.from;
     var square = data.square;
@@ -47,42 +51,42 @@ window.onload = function() {
       $(document.getElementById(square)).addClass('clicked clicked' + data.player);
     }
   });
+
   socket.on('playturn', function(data){
     myTurn = true;
   });
+
   socket.on('gameover', function(data) {
     $('.overlay').fadeIn('slow');
     $('.box').fadeIn('slow');
-
 
     if ((data.winner == 'X' && isXPlayer) || (data.winner == 'O' && !isXPlayer)) {
       $('.win-prompt').fadeIn('slow');
     } else if (data.winner == 'TIE') {
       $('.tie-prompt').fadeIn('slow');
-    }
-    else {
+    } else if (data.winner == 'DC') {
+      $('.dc-prompt').fadeIn('slow');
+    } else {
       $('.lose-prompt').fadeIn('slow');
     }
     $('.play-again').fadeIn('slow');
+    
     // reset default values
     isXPlayer = false;
     isSpectator = true;
     myTurn = false;
     symbol = "O";
-
-    // force this client to disconnect as a player if it hasn't already
-    //console.log('am i disconnecting')
-    //if (!data.disconnect) socket.disconnect();
     
   })
 
-  $('.square').on('mouseover', function() { // what if there is hover from a non player?
+  $('.square').on('mouseover', function() { 
     if (myTurn && !$(this).hasClass('clicked')) {
       socket.emit('mouseover', { gameID: gameNum, player: symbol, from: socket.id , square: $(this).attr('id')});
       $(this).addClass('hover hover' + symbol);
     }
   });
-  $('.square').on('mouseout', function() { // what if there is hover from a non player?
+
+  $('.square').on('mouseout', function() {
     if ($(this).hasClass('hover' + symbol) && !$(this).hasClass('clicked')) {
       socket.emit('mouseout', { gameID: gameNum, player: symbol, from: socket.id , square: $(this).attr('id')});
       $(this).removeClass('hover hover' + symbol);
@@ -109,6 +113,7 @@ window.onload = function() {
     socket.emit('joingame', {id: socket.id});
 
   });
+
   /* Clears the board. */
   function clearBoard() {
     $('.square').removeClass('hover hoverX');
@@ -117,6 +122,7 @@ window.onload = function() {
     $('.square').removeClass('clicked clickedX');
     $('.square').removeClass('clicked clickedO');
   }
+
   /* Countdown utility for ui. */
   var count = 3;
   function endCountdown() {
@@ -137,6 +143,7 @@ window.onload = function() {
       count--;
     }
   }
+
   /* Function to check if this player won */
   function checkWin() {
     var squares = [];
@@ -170,6 +177,7 @@ window.onload = function() {
         finishGame('TIE');
     }
   }
+  
   function finishGame(symbol) {
     socket.emit('endgame', {gameID: gameNum, winner: symbol, disconnect: false});
   }
